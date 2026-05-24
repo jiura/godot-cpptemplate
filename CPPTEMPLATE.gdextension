@@ -1,0 +1,9 @@
+[configuration]
+
+entry_symbol = "CPPTEMPLATE_library_init"
+compatibility_minimum = "4.1"
+
+[libraries]
+
+linux.debug.x86_64 = "res://bin/libCPPTEMPLATE.so"
+linux.release.x86_64 = "res://bin/libCPPTEMPLATE.so"

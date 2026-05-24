@@ -1,0 +1,11 @@
+-std=c++17
+--driver-mode=g++
+
+-Igodot-cpp/include
+-Igodot-cpp/gen/include
+-Igodot-cpp/gdextension
+-Igodot-cpp/gdextension/gdextension_interface.h
+
+-Iinclude
+-Igodot
+-Isrc

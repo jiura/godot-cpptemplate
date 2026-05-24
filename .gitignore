@@ -1,0 +1,11 @@
+bin/
+*.os
+
+# Godot 4+ specific ignores
+.godot/
+/android/
+*.import
+
+# SConstruct
+
+.sconsign.dblite
