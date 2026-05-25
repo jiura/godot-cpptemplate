@@ -1,14 +1,17 @@
 #include "game.h"
-#include "jvs/array.h"
 
 void gameInit(GameWorld *world) {
-    Entity player = {.speed = 5.0f};
+    world->entityCount = 0;
 
-    jvs_arrPushBack(world->entities, player);
+    Entity player = {};
+    player.speed = 5.0f;
+    player.active = true;
+
+    world->entities[world->entityCount++] = player;
 }
 
 void gameTick(GameWorld *world, InputState input, float dt) {
-    Entity *player = &world->entities[PLAYER_ID];
+    Entity *player = &world->entities[ENTITY_IDX_PLAYER];
 
     float moveX = (float)input.forward - (float)input.backward;
     float moveZ = (float)input.right - (float)input.left;

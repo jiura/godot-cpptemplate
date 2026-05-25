@@ -4,9 +4,14 @@
 #include <godot_cpp/classes/node3d.hpp>
 #include <godot_cpp/classes/mesh_instance3d.hpp>
 
-#include "../src/game.h"
+#include "../../src/3d/game.h"
 
 using namespace godot;
+
+struct VisualBinding {
+    Entity *entity;
+    Node3D *node;
+};
 
 class GameNode : public Node3D {
     GDCLASS(GameNode, Node3D);
@@ -14,7 +19,8 @@ class GameNode : public Node3D {
 private:
     GameWorld world;
 
-    MeshInstance3D* cube;
+    VisualBinding visuals[MAX_ENTITIES];
+    int visualsCount;
 
 protected:
     static void _bind_methods();

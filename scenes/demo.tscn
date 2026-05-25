@@ -1,11 +1,6 @@
 [gd_scene format=3 uid="uid://dr721vq7xbh1e"]
 
-[sub_resource type="BoxMesh" id="BoxMesh_5hjng"]
-
 [node name="Main" type="GameNode" unique_id=601100221]
-
-[node name="Cube" type="MeshInstance3D" parent="." unique_id=1402703907]
-mesh = SubResource("BoxMesh_5hjng")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=905936487]
 

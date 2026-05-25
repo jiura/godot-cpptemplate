@@ -1,17 +1,8 @@
 #ifndef GAME_H
 #define GAME_H
 
-#include "jvs/array.h"
-
-#define PLAYER_ID 0
-
-struct Player {
-    float x;
-    float y;
-    float z;
-
-    float speed;
-};
+#define MAX_ENTITIES 4096
+#define ENTITY_IDX_PLAYER 0
 
 struct InputState {
     bool forward;
@@ -23,10 +14,12 @@ struct InputState {
 struct Entity {
     float x, y, z;
     float speed;
+    bool active; // NOTE: Defines when it's safe to replace this entity on the array
 };
 
 struct GameWorld {
-    JVS_ARR(Entity) entities;
+    Entity entities[MAX_ENTITIES];
+    int entityCount;
 };
 
 void gameInit(GameWorld* world);
