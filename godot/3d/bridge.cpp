@@ -12,6 +12,8 @@ GameNode::GameNode() {
 }
 
 void GameNode::_ready() {
+    world = {};
+
     visualsCount = 0;
 
     gameInit(&world);
@@ -53,9 +55,13 @@ void GameNode::_physics_process(double dt) {
     }
 
     { // Updating visual positions
-        // TODO: VisualBindings to Entities likely won't 1:1 like this in the future
+        // TODO: VisualBindings to entities likely won't 1:1 like this in the future
         for (int i = 0; i < world.entityCount; ++i) {
-            Entity        *entity = &world.entities[i];
+            Entity *entity = &world.entities[i];
+            if (!entity->active) {
+                continue;
+            }
+
             VisualBinding *visual = &visuals[i];
 
             visual->node->set_position(Vector3(entity->x,
