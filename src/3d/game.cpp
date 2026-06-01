@@ -10,10 +10,14 @@ Entity *spawnEntity(GameWorld *world) {
         Entity *e = &world->entities[i];
 
         if (!e->active) {
-            *e = {};
-            e->speed = 5.0f;
+            *e        = {};
+            e->speed  = 5.0f;
             e->active = true;
-            
+
+            if (i > world->entityHiSlot) {
+                world->entityHiSlot = i;
+            }
+
             return e;
         }
     }
@@ -25,24 +29,28 @@ void destroyEntity(Entity *e) {
     memset(e, 0, sizeof(Entity));
 }
 
-void gameInit(GameWorld *world) {
-    world->entityCount = 0;
-
-    Entity player = {};
-    player.speed  = 5.0f;
-    player.active = true;
-
-    world->entities[world->entityCount++] = player;
+void worldInit(GameWorld *world) {
+    *world = {};
+    world->player = spawnEntity(world);
 }
 
 void gameTick(GameWorld *world, InputState input, float dt) {
     nilEntity = {};
 
-    Entity *player = &world->entities[ENTITY_IDX_PLAYER];
+    if (input.togglePlayer) {
+        if (!world->player) {
+            world->player = spawnEntity(world);
+        } else {
+            world->player->active = false;
+            world->player         = nullptr;
+        }
+    }
 
-    float moveX = (float)input.forward - (float)input.backward;
-    float moveZ = (float)input.right - (float)input.left;
+    if (world->player) {
+        float moveX = (float)input.forward - (float)input.backward;
+        float moveZ = (float)input.right - (float)input.left;
 
-    player->x += moveX * player->speed * dt;
-    player->z += moveZ * player->speed * dt;
+        world->player->x += moveX * world->player->speed * dt;
+        world->player->z += moveZ * world->player->speed * dt;
+    }
 }

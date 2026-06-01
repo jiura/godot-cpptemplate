@@ -9,7 +9,6 @@
 using namespace godot;
 
 struct VisualBinding {
-    Entity *entity;
     Node3D *node;
 };
 
@@ -20,7 +19,7 @@ private:
     GameWorld world;
 
     VisualBinding visuals[MAX_ENTITIES];
-    int visualsCount;
+    int visualsHiSlot;
 
 protected:
     static void _bind_methods();
@@ -29,6 +28,7 @@ public:
     GameNode();
 
     void _ready() override;
+    void _process(double dt) override;
     void _physics_process(double dt) override;
 };
 
