@@ -1,5 +1,7 @@
-#include "bridge.h"
+#include "../../src/3d/game.cpp"
 
+#include <godot_cpp/classes/node3d.hpp>
+#include <godot_cpp/classes/mesh_instance3d.hpp>
 #include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/classes/input.hpp>
 #include <godot_cpp/classes/input_map.hpp>
@@ -12,6 +14,32 @@
 #define ACTION_LEFT "move-left"
 #define ACTION_RIGHT "move-right"
 #define ACTION_TOGGLE_PLAYER "toggle-player"
+
+using namespace godot;
+
+struct VisualBinding {
+    Node3D *node;
+};
+
+class GameNode : public Node3D {
+    GDCLASS(GameNode, Node3D);
+
+private:
+    GameWorld world;
+
+    VisualBinding visuals[MAX_ENTITIES];
+    int           visualsHiSlot;
+
+protected:
+    static void _bind_methods();
+
+public:
+    GameNode();
+
+    void _ready() override;
+    void _process(double dt) override;
+    void _physics_process(double dt) override;
+};
 
 void GameNode::_bind_methods() {
 }
@@ -145,4 +173,40 @@ void GameNode::_physics_process(double dt) {
                                                entity->z));
         }
     }
+}
+
+void initialize_CPPTEMPLATE_module(ModuleInitializationLevel p_level) {
+    if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
+        return;
+    }
+
+    ClassDB::register_class<GameNode>();
+}
+
+void uninitialize_CPPTEMPLATE_module(ModuleInitializationLevel p_level) {
+    if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
+        return;
+    }
+}
+
+extern "C" {
+
+// Entry point
+GDExtensionBool GDE_EXPORT CPPTEMPLATE_library_init(
+    GDExtensionInterfaceGetProcAddress p_get_proc_address,
+    GDExtensionClassLibraryPtr         p_library,
+    GDExtensionInitialization         *r_initialization) {
+    GDExtensionBinding::InitObject init_obj(
+        p_get_proc_address,
+        p_library,
+        r_initialization);
+
+    init_obj.register_initializer(initialize_CPPTEMPLATE_module);
+    init_obj.register_terminator(uninitialize_CPPTEMPLATE_module);
+
+    init_obj.set_minimum_library_initialization_level(
+        MODULE_INITIALIZATION_LEVEL_SCENE);
+
+    return init_obj.init();
+}
 }

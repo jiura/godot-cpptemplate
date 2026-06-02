@@ -8,7 +8,8 @@ env = SConscript(
 env.Append(CPPPATH=["include"])
 
 # sources = glob("src/2d/*.cpp") + glob("godot/2d/*.cpp")
-sources = glob("src/3d/*.cpp") + glob("godot/3d/*.cpp")
+# sources = glob("src/3d/*.cpp") + glob("godot/3d/*.cpp")
+sources = glob("godot/3d/bridge.cpp")
 
 library = env.SharedLibrary(
     "bin/libCPPTEMPLATE",
