@@ -1,0 +1,29 @@
+#!/bin/bash
+
+g++ -o godot/3d/bridge.os \
+-c \
+-fno-gnu-unique \
+-std=c++17 \
+-fno-exceptions \
+-fPIC \
+-Wwrite-strings \
+-m64 \
+-march=x86-64 \
+-fvisibility=hidden \
+-O2 \
+-fPIC \
+-DLINUX_ENABLED -DUNIX_ENABLED -DTHREADS_ENABLED -DHOT_RELOAD_ENABLED -DDEBUG_ENABLED -DNDEBUG -DGDEXTENSION \
+-Igodot-cpp/include -Igodot-cpp/gen/include -Iinclude \
+godot/3d/bridge.cpp
+
+g++ -o bin/libCPPTEMPLATE.so \
+-Wl,-R,'$ORIGIN' \
+-m64 \
+-march=x86-64 \
+-static-libgcc \
+-static-libstdc++ \
+-fvisibility=hidden \
+-s \
+-shared \
+godot/3d/bridge.os \
+godot-cpp/bin/libgodot-cpp.linux.template_debug.x86_64.a
