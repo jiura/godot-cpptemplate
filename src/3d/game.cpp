@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <string.h>
 
 #define MAX_ENTITIES 4096
@@ -68,8 +67,8 @@ Entity *spawnPlayer(GameWorld *world) {
 }
 
 Entity *spawnProjectile(GameWorld *world,
-                        Vec3    pos,
-                        Vec3    velocity) {
+                        Vec3       pos,
+                        Vec3       velocity) {
     for (int i = 0; i < MAX_ENTITIES; ++i) {
         Entity *e = &world->entities[i];
 
@@ -127,7 +126,6 @@ void gameTick(GameWorld *world, InputState input, float dt) {
 
         // Shoot
         if (input.shoot) {
-            // printf("Detected click\n");
             spawnProjectile(world,
                             world->player->pos,
                             (Vec3){40.0f, 0.0f, 0.0f});

@@ -73,6 +73,7 @@ MeshInstance3D *createProjectileMesh() {
 
 // Init game
 void GameNode::_ready() {
+    memset(visuals, 0, MAX_ENTITIES * sizeof(*visuals));
     visualsHiSlot = 0;
 
     { // Define input actions
