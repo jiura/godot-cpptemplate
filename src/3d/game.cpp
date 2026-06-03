@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 
 #define MAX_ENTITIES 4096
@@ -9,32 +10,51 @@ struct InputState {
     bool right;
 
     bool togglePlayer;
+
+    bool shoot;
+};
+
+// Not to be confuse with Godot's own Vector3
+struct Vec3 {
+    float x, y, z;
+};
+
+enum EntityType {
+    ENTITY_PLAYER,
+    ENTITY_ENEMY,
+    ENTITY_PROJECTILE
 };
 
 struct Entity {
-    float x, y, z;
-    float speed;
-    bool active; // NOTE: Defines when it's safe to replace this entity on the array
+    Vec3 pos;
+    Vec3 vel;
+
+    float moveSpeed;
+    float lifetime;
+
+    EntityType type;
+    bool       active; // NOTE: Defines when it's safe to replace this entity on the array
 };
 extern Entity nilEntity;
 
 struct GameWorld {
-    Entity entities[MAX_ENTITIES];
+    Entity  entities[MAX_ENTITIES];
     Entity *player;
-    int entityHiSlot;
+    int     entityHiSlot;
 };
 
 Entity nilEntity = {};
 
-// TODO: Receive at least a Vector3 for initial pos
-Entity *spawnEntity(GameWorld *world) {
+Entity *spawnPlayer(GameWorld *world) {
     for (int i = 0; i < MAX_ENTITIES; ++i) {
         Entity *e = &world->entities[i];
 
         if (!e->active) {
-            *e        = {};
-            e->speed  = 5.0f;
-            e->active = true;
+            *e = {};
+
+            e->type      = ENTITY_PLAYER;
+            e->moveSpeed = 5.0f;
+            e->active    = true;
 
             if (i > world->entityHiSlot) {
                 world->entityHiSlot = i;
@@ -47,21 +67,50 @@ Entity *spawnEntity(GameWorld *world) {
     return &nilEntity;
 }
 
+Entity *spawnProjectile(GameWorld *world,
+                        Vec3    pos,
+                        Vec3    velocity) {
+    for (int i = 0; i < MAX_ENTITIES; ++i) {
+        Entity *e = &world->entities[i];
+
+        if (!e->active) {
+            *e = {};
+
+            e->pos      = pos;
+            e->vel      = velocity;
+            e->lifetime = 2.0f;
+            e->type     = ENTITY_PROJECTILE;
+            e->active   = true;
+
+            if (i > world->entityHiSlot) {
+                world->entityHiSlot = i;
+            }
+
+            return e;
+        }
+    }
+
+    return &nilEntity;
+}
+
+// Prefer this over just setting active to false,
+// as it avoids leaving trash behind
 void destroyEntity(Entity *e) {
     memset(e, 0, sizeof(Entity));
 }
 
 void worldInit(GameWorld *world) {
-    *world = {};
-    world->player = spawnEntity(world);
+    *world        = {};
+    world->player = spawnPlayer(world);
 }
 
 void gameTick(GameWorld *world, InputState input, float dt) {
     nilEntity = {};
 
+    /* Handle input */
     if (input.togglePlayer) {
         if (!world->player) {
-            world->player = spawnEntity(world);
+            world->player = spawnPlayer(world);
         } else {
             world->player->active = false;
             world->player         = nullptr;
@@ -69,10 +118,42 @@ void gameTick(GameWorld *world, InputState input, float dt) {
     }
 
     if (world->player) {
+        // Position
         float moveX = (float)input.forward - (float)input.backward;
         float moveZ = (float)input.right - (float)input.left;
 
-        world->player->x += moveX * world->player->speed * dt;
-        world->player->z += moveZ * world->player->speed * dt;
+        world->player->vel.x = moveX * world->player->moveSpeed;
+        world->player->vel.z = moveZ * world->player->moveSpeed;
+
+        // Shoot
+        if (input.shoot) {
+            // printf("Detected click\n");
+            spawnProjectile(world,
+                            world->player->pos,
+                            (Vec3){40.0f, 0.0f, 0.0f});
+        }
+    }
+
+    /* Update entity status */
+    for (int i = 0; i <= world->entityHiSlot; ++i) {
+        Entity *e = &world->entities[i];
+
+        if (!e->active) {
+            continue;
+        }
+
+        if (e->type == ENTITY_PROJECTILE) {
+            e->lifetime -= dt;
+
+            if (e->lifetime <= 0.0f) {
+                destroyEntity(e);
+                continue;
+            }
+        }
+
+        // Position
+        e->pos.x += e->vel.x * dt;
+        e->pos.y += e->vel.y * dt;
+        e->pos.z += e->vel.z * dt;
     }
 }

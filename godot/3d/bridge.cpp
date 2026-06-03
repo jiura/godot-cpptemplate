@@ -1,19 +1,23 @@
 #include "../../src/3d/game.cpp"
 
 #include <godot_cpp/classes/node3d.hpp>
-#include <godot_cpp/classes/mesh_instance3d.hpp>
 #include <godot_cpp/classes/engine.hpp>
+
 #include <godot_cpp/classes/input.hpp>
 #include <godot_cpp/classes/input_map.hpp>
 #include <godot_cpp/classes/input_event_key.hpp>
-#include <godot_cpp/classes/box_mesh.hpp>
+#include <godot_cpp/classes/input_event_mouse_button.hpp>
+
 #include <godot_cpp/classes/mesh_instance3d.hpp>
+#include <godot_cpp/classes/box_mesh.hpp>
+#include <godot_cpp/classes/sphere_mesh.hpp>
 
 #define ACTION_FORWARD "move-forward"
 #define ACTION_BACKWARD "move-backward"
 #define ACTION_LEFT "move-left"
 #define ACTION_RIGHT "move-right"
 #define ACTION_TOGGLE_PLAYER "toggle-player"
+#define ACTION_SHOOT "shoot"
 
 using namespace godot;
 
@@ -57,6 +61,16 @@ MeshInstance3D *createPlayerMesh() {
     return cube;
 }
 
+MeshInstance3D *createProjectileMesh() {
+    MeshInstance3D *sphere = memnew(MeshInstance3D);
+
+    Ref<SphereMesh> mesh;
+    mesh.instantiate();
+    sphere->set_mesh(mesh);
+
+    return sphere;
+}
+
 // Init game
 void GameNode::_ready() {
     visualsHiSlot = 0;
@@ -93,6 +107,12 @@ void GameNode::_ready() {
         space.instantiate();
         space->set_physical_keycode(Key::KEY_SPACE);
         im->action_add_event(ACTION_TOGGLE_PLAYER, space);
+
+        im->add_action(ACTION_SHOOT);
+        Ref<InputEventMouseButton> leftMouse;
+        leftMouse.instantiate();
+        leftMouse->set_button_index(MouseButton::MOUSE_BUTTON_LEFT);
+        im->action_add_event(ACTION_SHOOT, leftMouse);
     }
 
     worldInit(&world);
@@ -111,7 +131,7 @@ void GameNode::_ready() {
 }
 
 void GameNode::_process(double dt) {
-    // NOTE: This avoid processing physics on the editor
+    // NOTE: This avoids processing on the editor
     // if (Engine::get_singleton()->is_editor_hint())
     //     return;
 
@@ -129,7 +149,7 @@ void GameNode::_process(double dt) {
 }
 
 void GameNode::_physics_process(double dt) {
-    // NOTE: This avoid processing physics on the editor
+    // NOTE: This avoids processing physics on the editor
     // if (Engine::get_singleton()->is_editor_hint())
     //     return;
 
@@ -143,6 +163,7 @@ void GameNode::_physics_process(double dt) {
         input.right    = inputSingleton->is_action_pressed(ACTION_RIGHT);
 
         input.togglePlayer = inputSingleton->is_action_just_released(ACTION_TOGGLE_PLAYER);
+        input.shoot        = inputSingleton->is_action_just_pressed(ACTION_SHOOT);
     }
 
     gameTick(&world, input, (float)dt);
@@ -161,19 +182,34 @@ void GameNode::_physics_process(double dt) {
             }
 
             if (!visual->node) {
-                // TODO: Create mesh according to entity
                 // TODO: Check visualHiSlot when creating new visuals
-                MeshInstance3D *cube = createPlayerMesh();
-                add_child(cube);
-                visual->node = cube;
+                MeshInstance3D *mesh = nullptr;
+                switch (entity->type) {
+                    case ENTITY_PLAYER:
+                        mesh = createPlayerMesh();
+                        break;
+                    case ENTITY_PROJECTILE:
+                        mesh = createProjectileMesh();
+                        break;
+                    default:
+                        // TODO
+                        break;
+                }
+
+                if (mesh) {
+                    add_child(mesh);
+                    visual->node = mesh;
+                }
             }
 
-            visual->node->set_position(Vector3(entity->x,
-                                               entity->y,
-                                               entity->z));
+            visual->node->set_position(Vector3(entity->pos.x,
+                                               entity->pos.y,
+                                               entity->pos.z));
         }
     }
 }
+
+/* GDExtension config */
 
 void initialize_CPPTEMPLATE_module(ModuleInitializationLevel p_level) {
     if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
@@ -190,7 +226,6 @@ void uninitialize_CPPTEMPLATE_module(ModuleInitializationLevel p_level) {
 }
 
 extern "C" {
-
 // Entry point
 GDExtensionBool GDE_EXPORT CPPTEMPLATE_library_init(
     GDExtensionInterfaceGetProcAddress p_get_proc_address,
