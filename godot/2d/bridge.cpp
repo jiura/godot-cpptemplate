@@ -232,20 +232,26 @@ void GameNode::_physics_process(double dt) {
 
             if (!node->body) {
                 CharacterBody2D *body = nullptr;
-                Vector2 pos;
+                Vector2          pos;
 
                 switch (entity->type) {
                     case ENTITY_PROJECTILE: {
                         pos              = nodes[world.player->id].body->get_global_position();
                         Vector2 mousePos = get_global_mouse_position();
                         entity->move     = {mousePos.x - pos.x, mousePos.y - pos.y};
-                        body = createCircleBody(pos, COLOR_BLUE);
+                        body             = createCircleBody(pos, COLOR_BLUE);
                         break;
                     }
 
-                    default: {
-                        pos = (Vector2){0.0f, 0.0f};
+                    case ENTITY_ENEMY: {
+                        pos  = (Vector2){0.0f, 0.0f};
                         body = createSquareBody(pos, COLOR_RED);
+                        break;
+                    }
+
+                    case ENTITY_PLAYER: {
+                        pos  = (Vector2){0.0f, 0.0f};
+                        body = createSquareBody(pos, COLOR_GREEN);
                         break;
                     }
                 }
