@@ -20,8 +20,8 @@ struct Vec3 {
 
 enum EntityType {
     ENTITY_PLAYER,
-    ENTITY_ENEMY,
-    ENTITY_PROJECTILE
+    ENTITY_PROJECTILE,
+    ENTITY_ENEMY
 };
 
 struct Entity {
@@ -92,6 +92,29 @@ Entity *spawnProjectile(GameWorld *world,
     return &nilEntity;
 }
 
+Entity *spawnEnemy(GameWorld *world) {
+    for (int i = 0; i < MAX_ENTITIES; ++i) {
+        Entity *e = &world->entities[i];
+
+        if (!e->active) {
+            *e = {};
+
+            e->pos = (Vec3){15, 0, 0};
+            e->type      = ENTITY_ENEMY;
+            e->moveSpeed = 5.0f;
+            e->active    = true;
+
+            if (i > world->entityHiSlot) {
+                world->entityHiSlot = i;
+            }
+
+            return e;
+        }
+    }
+
+    return &nilEntity;
+}
+
 // Prefer this over just setting active to false,
 // as it avoids leaving trash behind
 void destroyEntity(Entity *e) {
@@ -100,7 +123,9 @@ void destroyEntity(Entity *e) {
 
 void worldInit(GameWorld *world) {
     *world        = {};
+
     world->player = spawnPlayer(world);
+    spawnEnemy(world);
 }
 
 void gameTick(GameWorld *world, InputState input, float dt) {

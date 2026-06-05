@@ -9,8 +9,9 @@
 #include <godot_cpp/classes/input_event_mouse_button.hpp>
 
 #include <godot_cpp/classes/mesh_instance3d.hpp>
-#include <godot_cpp/classes/box_mesh.hpp>
+#include <godot_cpp/classes/cylinder_mesh.hpp>
 #include <godot_cpp/classes/sphere_mesh.hpp>
+#include <godot_cpp/classes/box_mesh.hpp>
 
 #define ACTION_FORWARD "move-forward"
 #define ACTION_BACKWARD "move-backward"
@@ -21,8 +22,8 @@
 
 using namespace godot;
 
-struct VisualBinding {
-    Node3D *node;
+struct EntityNode {
+    MeshInstance3D *visual;
 };
 
 class GameNode : public Node3D {
@@ -31,8 +32,7 @@ class GameNode : public Node3D {
 private:
     GameWorld world;
 
-    VisualBinding visuals[MAX_ENTITIES];
-    int           visualsHiSlot;
+    EntityNode nodes[MAX_ENTITIES];
 
 protected:
     static void _bind_methods();
@@ -51,30 +51,41 @@ void GameNode::_bind_methods() {
 GameNode::GameNode() {
 }
 
-MeshInstance3D *createPlayerMesh() {
-    MeshInstance3D *cube = memnew(MeshInstance3D);
+MeshInstance3D *createVisualNode(EntityType type) {
+    MeshInstance3D *visual = memnew(MeshInstance3D);
 
-    Ref<BoxMesh> mesh;
-    mesh.instantiate();
-    cube->set_mesh(mesh);
+    switch (type) {
+        case ENTITY_PLAYER: {
+            Ref<CylinderMesh> mesh;
+            mesh.instantiate();
+            visual->set_mesh(mesh);
+            break;
+        }
 
-    return cube;
-}
+        case ENTITY_PROJECTILE: {
+            Ref<SphereMesh> mesh;
+            mesh.instantiate();
+            visual->set_mesh(mesh);
+            break;
+        }
 
-MeshInstance3D *createProjectileMesh() {
-    MeshInstance3D *sphere = memnew(MeshInstance3D);
+        case ENTITY_ENEMY: {
+            Ref<BoxMesh> mesh;
+            mesh.instantiate();
+            visual->set_mesh(mesh);
+            break;
+        }
 
-    Ref<SphereMesh> mesh;
-    mesh.instantiate();
-    sphere->set_mesh(mesh);
+        default:
+            return nullptr;
+    }
 
-    return sphere;
+    return visual;
 }
 
 // Init game
 void GameNode::_ready() {
-    memset(visuals, 0, MAX_ENTITIES * sizeof(*visuals));
-    visualsHiSlot = 0;
+    memset(nodes, 0, sizeof(nodes));
 
     { // Define input actions
         InputMap *im = InputMap::get_singleton();
@@ -117,18 +128,6 @@ void GameNode::_ready() {
     }
 
     worldInit(&world);
-
-    { // Create player
-        // Create mesh node
-        MeshInstance3D *cube = createPlayerMesh();
-        add_child(cube);
-
-        // Bind mesh node to entity
-        VisualBinding binding = {};
-        binding.node          = cube;
-
-        visuals[visualsHiSlot] = binding;
-    }
 }
 
 void GameNode::_process(double dt) {
@@ -171,41 +170,28 @@ void GameNode::_physics_process(double dt) {
 
     { // Update visuals
         for (int i = 0; i <= world.entityHiSlot; ++i) {
-            Entity        *entity = &world.entities[i];
-            VisualBinding *visual = &visuals[i];
+            Entity     *entity = &world.entities[i];
+            EntityNode *node = &nodes[i];
 
             if (!entity->active) {
-                if (visual->node) {
-                    visual->node->queue_free();
-                    visual->node = nullptr;
+                if (node->visual) {
+                    node->visual->queue_free();
+                    node->visual = nullptr;
                 }
                 continue;
             }
 
-            if (!visual->node) {
-                // TODO: Check visualHiSlot when creating new visuals
-                MeshInstance3D *mesh = nullptr;
-                switch (entity->type) {
-                    case ENTITY_PLAYER:
-                        mesh = createPlayerMesh();
-                        break;
-                    case ENTITY_PROJECTILE:
-                        mesh = createProjectileMesh();
-                        break;
-                    default:
-                        // TODO
-                        break;
-                }
-
-                if (mesh) {
-                    add_child(mesh);
-                    visual->node = mesh;
+            if (!node->visual) {
+                MeshInstance3D *visual = createVisualNode(entity->type);
+                if (visual) {
+                    add_child(visual);
+                    node->visual = visual;
                 }
             }
 
-            visual->node->set_position(Vector3(entity->pos.x,
-                                               entity->pos.y,
-                                               entity->pos.z));
+            node->visual->set_position(Vector3(entity->pos.x,
+                                                 entity->pos.y,
+                                                 entity->pos.z));
         }
     }
 }
