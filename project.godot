@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="cpptemplate"
-run/main_scene="uid://dr721vq7xbh1e"
+run/main_scene="uid://cdcijr1432c01"
 config/features=PackedStringArray("4.6", "Forward Plus")
 boot_splash/show_image=false
 config/icon="res://icon.svg"
