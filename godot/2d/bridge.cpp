@@ -1,9 +1,12 @@
 #include "../../src/2d/game.cpp"
 
+#include "stdio.h"
+
 #include <godot_cpp/classes/node2d.hpp>
 #include <godot_cpp/classes/engine.hpp>
 
 #include <godot_cpp/classes/character_body2d.hpp>
+#include <godot_cpp/classes/area2d.hpp>
 #include <godot_cpp/classes/collision_shape2d.hpp>
 #include <godot_cpp/classes/rectangle_shape2d.hpp>
 #include <godot_cpp/classes/circle_shape2d.hpp>
@@ -13,6 +16,8 @@
 #include <godot_cpp/classes/input_map.hpp>
 #include <godot_cpp/classes/input_event_key.hpp>
 #include <godot_cpp/classes/input_event_mouse_button.hpp>
+
+#define GAMENODE_METHOD_ON_COLLISION "on_collision"
 
 #define ACTION_UP "move-up"
 #define ACTION_DOWN "move-down"
@@ -25,10 +30,24 @@
 #define COLOR_GREEN (Color){0, 1, 0}
 #define COLOR_BLUE (Color){0, 0, 1}
 
+#define AREA2D(x) ((Area2D *)x)
+#define BODY2D(x) ((CharacterBody2D *)x)
+
+// Collision layers
+#define COLLAYER_PLAYER (1 << 0)
+#define COLLAYER_ENEMIES (1 << 1)
+#define COLLAYER_PLAYER_PROJECTILE (1 << 2)
+
 using namespace godot;
 
+enum EntityNodeType {
+    ENTITY_NODE_BODY,
+    ENTITY_NODE_AREA,
+};
+
 struct EntityNode {
-    CharacterBody2D *body;
+    Node2D        *root;
+    EntityNodeType type;
 };
 
 class GameNode : public Node2D {
@@ -37,7 +56,7 @@ class GameNode : public Node2D {
 private:
     GameWorld world;
 
-    EntityNode nodes[MAX_ENTITIES];
+    EntityNode nodes[MAX_ENTITIES] = {};
 
 protected:
     static void _bind_methods();
@@ -48,9 +67,14 @@ public:
     void _ready() override;
     void _process(double dt) override;
     void _physics_process(double dt) override;
+
+    void on_collision(Node2D *other, Node2D *self);
 };
 
 void GameNode::_bind_methods() {
+    ClassDB::bind_method(
+        D_METHOD(GAMENODE_METHOD_ON_COLLISION, "other", "self"),
+        &GameNode::on_collision);
 }
 
 GameNode::GameNode() {
@@ -130,6 +154,62 @@ CharacterBody2D *createCircleBody(Vector2 pos, Color color) {
     body->add_child(poly);
 
     return body;
+}
+
+Area2D *createCircleArea(Vector2 pos, Color color) {
+    Area2D *area = memnew(Area2D);
+
+    area->set_position(pos);
+
+    // Hitbox
+    CollisionShape2D *shape = memnew(CollisionShape2D);
+
+    CircleShape2D *circle = memnew(CircleShape2D);
+    circle->set_radius(4.0f);
+    shape->set_shape(circle);
+
+    area->add_child(shape);
+
+    // Visual
+    Polygon2D *poly = memnew(Polygon2D);
+
+    PackedVector2Array points;
+    const int          segments = 16;
+    const float        radius   = 4.0f;
+
+    for (int i = 0; i < segments; ++i) {
+        float a = (Math_TAU * i) / segments;
+        points.push_back((Vector2){(float)cos(a) * radius,
+                                   (float)sin(a) * radius});
+    }
+
+    poly->set_polygon(points);
+    poly->set_color(color);
+
+    area->add_child(poly);
+
+    return area;
+}
+
+EntityNode *findEntityNodeByRoot(EntityNode *nodes, Node2D *node, int entityHiSlot) {
+    for (int i = 0; i <= entityHiSlot; ++i) {
+        if (nodes[i].root == node) {
+            return &nodes[i];
+        }
+    }
+
+    return nullptr;
+}
+
+void GameNode::on_collision(Node2D *other, Node2D *self) {
+    EntityNode *o = findEntityNodeByRoot(nodes, other, world.entityHiSlot);
+    EntityNode *s = findEntityNodeByRoot(nodes, self, world.entityHiSlot);
+
+    if (!o || !s) {
+        return;
+    }
+
+    printf("Projectile hit something!\n");
 }
 
 // Init game
@@ -223,41 +303,62 @@ void GameNode::_physics_process(double dt) {
             EntityNode *node   = &nodes[i];
 
             if (!entity->active) {
-                if (node->body) {
-                    node->body->queue_free();
-                    node->body = nullptr;
+                if (node->root) {
+                    node->root->queue_free();
+                    node->root = nullptr;
                 }
                 continue;
             }
 
-            if (!node->body) {
-                CharacterBody2D *body = nullptr;
-                Vector2          pos;
+            if (!node->root) {
+                Vector2 pos;
 
                 switch (entity->type) {
                     case ENTITY_PROJECTILE: {
-                        pos              = nodes[world.player->id].body->get_global_position();
+                        pos              = nodes[world.player->id].root->get_global_position();
                         Vector2 mousePos = get_global_mouse_position();
-                        entity->move     = {mousePos.x - pos.x, mousePos.y - pos.y};
-                        body             = createCircleBody(pos, COLOR_BLUE);
+                        // TODO: This is the bridge handling gameplay stuff...
+                        entity->move = {mousePos.x - pos.x, mousePos.y - pos.y};
+
+                        node->root = createCircleArea(pos, COLOR_BLUE);
+                        AREA2D(node->root)->set_collision_layer(COLLAYER_PLAYER_PROJECTILE);
+                        AREA2D(node->root)->set_collision_mask(COLLAYER_ENEMIES);
+
+                        node->root->connect("body_entered",
+                                            Callable(this, GAMENODE_METHOD_ON_COLLISION).bind(node->root));
+
+                        node->type = ENTITY_NODE_AREA;
                         break;
                     }
 
                     case ENTITY_ENEMY: {
-                        pos  = (Vector2){0.0f, 0.0f};
-                        body = createSquareBody(pos, COLOR_RED);
+                        pos = (Vector2){0.0f, 0.0f};
+
+                        node->root = createSquareBody(pos, COLOR_RED);
+                        BODY2D(node->root)->set_collision_layer(COLLAYER_ENEMIES);
+                        BODY2D(node->root)->set_collision_mask(COLLAYER_PLAYER);
+
+                        node->type = ENTITY_NODE_BODY;
                         break;
                     }
 
                     case ENTITY_PLAYER: {
-                        pos  = (Vector2){0.0f, 0.0f};
-                        body = createSquareBody(pos, COLOR_GREEN);
+                        pos = (Vector2){0.0f, 0.0f};
+
+                        node->root = createSquareBody(pos, COLOR_GREEN);
+                        BODY2D(node->root)->set_collision_layer(COLLAYER_PLAYER);
+                        BODY2D(node->root)->set_collision_mask(COLLAYER_ENEMIES);
+
+                        node->type = ENTITY_NODE_BODY;
                         break;
                     }
                 }
 
-                add_child(body);
-                node->body = body;
+                if (!node->root) {
+                    continue;
+                }
+
+                add_child(node->root);
             }
 
             Vector2 dir = {entity->move.x, entity->move.y};
@@ -265,8 +366,19 @@ void GameNode::_physics_process(double dt) {
                 dir = dir.normalized();
             }
 
-            node->body->set_velocity(dir * entity->moveSpeed);
-            node->body->move_and_slide();
+            switch (node->type) {
+                case ENTITY_NODE_BODY: {
+                    BODY2D(node->root)->set_velocity(dir * entity->moveSpeed);
+                    BODY2D(node->root)->move_and_slide();
+                    break;
+                }
+
+                case ENTITY_NODE_AREA: {
+                    Vector2 currentPos = AREA2D(node->root)->get_position();
+                    AREA2D(node->root)->set_position(currentPos + dir * entity->moveSpeed * dt);
+                    break;
+                }
+            }
         }
     }
 }
