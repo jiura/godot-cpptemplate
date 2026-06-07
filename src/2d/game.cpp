@@ -34,6 +34,8 @@ struct Entity {
     float moveSpeed;
     float lifetime;
 
+    float hp;
+
     EntityType type;
 
     int  id;     // Index on the arrays
@@ -71,7 +73,10 @@ Entity *spawnPlayer(GameWorld *world) {
             *e = {};
 
             e->type      = ENTITY_PLAYER;
+
+            e->hp        = 100.0f;
             e->moveSpeed = 250.0f;
+
             e->id        = i;
             e->active    = true;
 
@@ -93,10 +98,12 @@ Entity *spawnProjectile(GameWorld *world, Vec2 move) {
         if (!e->active) {
             *e = {};
 
+            e->type      = ENTITY_PROJECTILE;
+
             e->move      = move;
             e->moveSpeed = 500.0f;
             e->lifetime  = 2.0f;
-            e->type      = ENTITY_PROJECTILE;
+
             e->id        = i;
             e->active    = true;
 
@@ -119,7 +126,10 @@ Entity *spawnEnemy(GameWorld *world) {
             *e = {};
 
             e->type      = ENTITY_ENEMY;
+
+            e->hp        = 100.0f;
             e->moveSpeed = 5.0f;
+
             e->id        = i;
             e->active    = true;
 
@@ -177,7 +187,8 @@ void gameTick(GameWorld *world, InputState input, float dt) {
 
         if (ce->self->type == ENTITY_PROJECTILE) {
             if (ce->other->type == ENTITY_ENEMY) {
-                destroyEntity(ce->other);
+                // destroyEntity(ce->other);
+                ce->other->hp -= 100.0f;
                 destroyEntity(ce->self);
             }
         }

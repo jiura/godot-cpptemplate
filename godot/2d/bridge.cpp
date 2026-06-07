@@ -37,6 +37,8 @@
 #define COLLAYER_ENEMIES (1 << 1)
 #define COLLAYER_PLAYER_PROJECTILE (1 << 2)
 
+#define NODE_NM_POLYGON "polygon"
+
 using namespace godot;
 
 enum EntityNodeType {
@@ -100,6 +102,7 @@ CharacterBody2D *createSquareBody(Vector2 pos, Color color) {
 
     // Visual
     Polygon2D *poly = memnew(Polygon2D);
+    poly->set_name(NODE_NM_POLYGON);
 
     PackedVector2Array points;
     points.push_back(Vector2(-8, -8));
@@ -136,6 +139,7 @@ CharacterBody2D *createCircleBody(Vector2 pos, Color color) {
 
     // Visual
     Polygon2D *poly = memnew(Polygon2D);
+    poly->set_name(NODE_NM_POLYGON);
 
     PackedVector2Array points;
     const int          segments = 16;
@@ -171,6 +175,7 @@ Area2D *createCircleArea(Vector2 pos, Color color) {
 
     // Visual
     Polygon2D *poly = memnew(Polygon2D);
+    poly->set_name(NODE_NM_POLYGON);
 
     PackedVector2Array points;
     const int          segments = 16;
@@ -320,6 +325,7 @@ void GameNode::_physics_process(double dt) {
                 continue;
             }
 
+            /* Create visual -- START */
             if (!node->root) {
                 Vector2 pos;
 
@@ -374,6 +380,18 @@ void GameNode::_physics_process(double dt) {
 
                 add_child(node->root);
             }
+            /* Create visual -- END */
+
+            /* Update visual -- START */
+            if (entity->type == ENTITY_ENEMY) {
+                if (entity->hp <= 0.0f) {
+                    Polygon2D *poly = node->root->get_node<Polygon2D>(NODE_NM_POLYGON);
+                    if (poly) {
+                        poly->set_color(COLOR_BLUE);
+                    }
+                }
+            }
+            /* Update visual -- END */
 
             Vector2 dir = {entity->move.x, entity->move.y};
             if (dir.length() > 0.0f) {
