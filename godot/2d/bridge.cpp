@@ -1,6 +1,5 @@
 #include "../../src/2d/game.cpp"
-
-#include "stdio.h"
+#include "jvs/array.h"
 
 #include <godot_cpp/classes/node2d.hpp>
 #include <godot_cpp/classes/engine.hpp>
@@ -142,7 +141,7 @@ CharacterBody2D *createCircleBody(Vector2 pos, Color color) {
     const int          segments = 16;
     const float        radius   = 4.0f;
 
-    for (int i = 0; i < segments; ++i) {
+    for (size_t i = 0; i < segments; ++i) {
         float a = (Math_TAU * i) / segments;
         points.push_back((Vector2){(float)cos(a) * radius,
                                    (float)sin(a) * radius});
@@ -177,7 +176,7 @@ Area2D *createCircleArea(Vector2 pos, Color color) {
     const int          segments = 16;
     const float        radius   = 4.0f;
 
-    for (int i = 0; i < segments; ++i) {
+    for (size_t i = 0; i < segments; ++i) {
         float a = (Math_TAU * i) / segments;
         points.push_back((Vector2){(float)cos(a) * radius,
                                    (float)sin(a) * radius});
@@ -191,25 +190,32 @@ Area2D *createCircleArea(Vector2 pos, Color color) {
     return area;
 }
 
-EntityNode *findEntityNodeByRoot(EntityNode *nodes, Node2D *node, int entityHiSlot) {
-    for (int i = 0; i <= entityHiSlot; ++i) {
+// -1 for not found
+int findEntityNodeIdByRoot(EntityNode *nodes, Node2D *node, size_t entityHiSlot) {
+    // entityHiSlot show be <= MAX_ENTITIES that right now is 4096
+    assert(entityHiSlot < INT_MAX);
+    for (size_t i = 0; i <= entityHiSlot; ++i) {
         if (nodes[i].root == node) {
-            return &nodes[i];
+            return i;
         }
     }
 
-    return nullptr;
+    return -1;
 }
 
 void GameNode::on_collision(Node2D *other, Node2D *self) {
-    EntityNode *o = findEntityNodeByRoot(nodes, other, world.entityHiSlot);
-    EntityNode *s = findEntityNodeByRoot(nodes, self, world.entityHiSlot);
+    int oId = findEntityNodeIdByRoot(nodes, other, world.entityHiSlot);
+    int sId = findEntityNodeIdByRoot(nodes, self, world.entityHiSlot);
 
-    if (!o || !s) {
+    if (oId < 0 || sId < 0) {
+        // TODO: LOG that entity wasn't found
         return;
     }
 
-    printf("Projectile hit something!\n");
+    CollisionEvent ce = {.self  = &world.entities[sId],
+                         .other = &world.entities[oId]};
+
+    jvs_arrPushBack(world.events.collisions, ce);
 }
 
 // Init game
@@ -297,8 +303,12 @@ void GameNode::_physics_process(double dt) {
 
     gameTick(&world, input, (float)dt);
 
+    if (world.events.collisions) {
+        jvs_arrEmpty(world.events.collisions);
+    }
+
     { // Update nodes
-        for (int i = 0; i <= world.entityHiSlot; ++i) {
+        for (size_t i = 0; i <= world.entityHiSlot; ++i) {
             Entity     *entity = &world.entities[i];
             EntityNode *node   = &nodes[i];
 
@@ -352,6 +362,10 @@ void GameNode::_physics_process(double dt) {
                         node->type = ENTITY_NODE_BODY;
                         break;
                     }
+
+                    case ENTITY_NONE:
+                    default:
+                        break;
                 }
 
                 if (!node->root) {

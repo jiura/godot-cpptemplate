@@ -39,13 +39,13 @@ extern Entity nilEntity;
 struct GameWorld {
     Entity  entities[MAX_ENTITIES];
     Entity *player;
-    int     entityHiSlot;
+    size_t  entityHiSlot;
 };
 
 Entity nilEntity = {};
 
 Entity *spawnPlayer(GameWorld *world) {
-    for (int i = 0; i < MAX_ENTITIES; ++i) {
+    for (size_t i = 0; i < MAX_ENTITIES; ++i) {
         Entity *e = &world->entities[i];
 
         if (!e->active) {
@@ -69,7 +69,7 @@ Entity *spawnPlayer(GameWorld *world) {
 Entity *spawnProjectile(GameWorld *world,
                         Vec3       pos,
                         Vec3       velocity) {
-    for (int i = 0; i < MAX_ENTITIES; ++i) {
+    for (size_t i = 0; i < MAX_ENTITIES; ++i) {
         Entity *e = &world->entities[i];
 
         if (!e->active) {
@@ -93,13 +93,13 @@ Entity *spawnProjectile(GameWorld *world,
 }
 
 Entity *spawnEnemy(GameWorld *world) {
-    for (int i = 0; i < MAX_ENTITIES; ++i) {
+    for (size_t i = 0; i < MAX_ENTITIES; ++i) {
         Entity *e = &world->entities[i];
 
         if (!e->active) {
             *e = {};
 
-            e->pos = (Vec3){15, 0, 0};
+            e->pos       = (Vec3){15, 0, 0};
             e->type      = ENTITY_ENEMY;
             e->moveSpeed = 5.0f;
             e->active    = true;
@@ -122,7 +122,7 @@ void destroyEntity(Entity *e) {
 }
 
 void worldInit(GameWorld *world) {
-    *world        = {};
+    *world = {};
 
     world->player = spawnPlayer(world);
     spawnEnemy(world);
@@ -158,7 +158,7 @@ void gameTick(GameWorld *world, InputState input, float dt) {
     }
 
     /* Update entity status */
-    for (int i = 0; i <= world->entityHiSlot; ++i) {
+    for (size_t i = 0; i <= world->entityHiSlot; ++i) {
         Entity *e = &world->entities[i];
 
         if (!e->active) {

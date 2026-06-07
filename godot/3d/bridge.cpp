@@ -169,7 +169,7 @@ void GameNode::_physics_process(double dt) {
     gameTick(&world, input, (float)dt);
 
     { // Update visuals
-        for (int i = 0; i <= world.entityHiSlot; ++i) {
+        for (size_t i = 0; i <= world.entityHiSlot; ++i) {
             Entity     *entity = &world.entities[i];
             EntityNode *node = &nodes[i];
 

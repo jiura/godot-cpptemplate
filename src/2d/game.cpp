@@ -1,4 +1,7 @@
-#include <string.h>
+#include "stdio.h"
+#include "assert.h"
+
+#include "jvs/array.h"
 
 #define MAX_ENTITIES 4096
 
@@ -19,6 +22,7 @@ struct Vec2 {
 };
 
 enum EntityType {
+    ENTITY_NONE,
     ENTITY_PLAYER,
     ENTITY_PROJECTILE,
     ENTITY_ENEMY
@@ -34,19 +38,33 @@ struct Entity {
 
     int  id;     // Index on the arrays
     bool active; // Defines when it's safe to replace this entity on the array
+                 // TODO: Think of a way to avoid accidentally setting this to false
+                 // instead of using destroyEntity()
 };
 extern Entity nilEntity;
+
+struct CollisionEvent {
+    Entity *self;
+    Entity *other;
+};
+
+// Event queues
+struct Events {
+    JVS_ARR(CollisionEvent) collisions;
+};
 
 struct GameWorld {
     Entity  entities[MAX_ENTITIES];
     Entity *player;
-    int     entityHiSlot;
+    size_t  entityHiSlot;
+
+    Events events;
 };
 
 Entity nilEntity = {};
 
 Entity *spawnPlayer(GameWorld *world) {
-    for (int i = 0; i < MAX_ENTITIES; ++i) {
+    for (size_t i = 0; i < MAX_ENTITIES; ++i) {
         Entity *e = &world->entities[i];
 
         if (!e->active) {
@@ -69,7 +87,7 @@ Entity *spawnPlayer(GameWorld *world) {
 }
 
 Entity *spawnProjectile(GameWorld *world, Vec2 move) {
-    for (int i = 0; i < MAX_ENTITIES; ++i) {
+    for (size_t i = 0; i < MAX_ENTITIES; ++i) {
         Entity *e = &world->entities[i];
 
         if (!e->active) {
@@ -94,7 +112,7 @@ Entity *spawnProjectile(GameWorld *world, Vec2 move) {
 }
 
 Entity *spawnEnemy(GameWorld *world) {
-    for (int i = 0; i < MAX_ENTITIES; ++i) {
+    for (size_t i = 0; i < MAX_ENTITIES; ++i) {
         Entity *e = &world->entities[i];
 
         if (!e->active) {
@@ -153,8 +171,20 @@ void gameTick(GameWorld *world, InputState input, float dt) {
         }
     }
 
+    /* Handle events */
+    for (size_t i = 0; i < jvs_arrCount(world->events.collisions); ++i) {
+        CollisionEvent *ce = &world->events.collisions[i];
+
+        if (ce->self->type == ENTITY_PROJECTILE) {
+            if (ce->other->type == ENTITY_ENEMY) {
+                destroyEntity(ce->other);
+                destroyEntity(ce->self);
+            }
+        }
+    }
+
     /* Update entity status */
-    for (int i = 0; i <= world->entityHiSlot; ++i) {
+    for (size_t i = 0; i <= world->entityHiSlot; ++i) {
         Entity *e = &world->entities[i];
 
         if (!e->active) {
