@@ -16,6 +16,9 @@
 #include <godot_cpp/classes/input_event_key.hpp>
 #include <godot_cpp/classes/input_event_mouse_button.hpp>
 
+#include <godot_cpp/classes/packed_scene.hpp>
+#include <godot_cpp/classes/resource_loader.hpp>
+
 #define GAMENODE_METHOD_ON_COLLISION "on_collision"
 
 #define ACTION_UP "move-up"
@@ -29,6 +32,7 @@
 #define COLOR_GREEN (Color){0, 1, 0}
 #define COLOR_BLUE (Color){0, 0, 1}
 
+#define NODE2D(x) ((Node2D *)x)
 #define AREA2D(x) ((Area2D *)x)
 #define BODY2D(x) ((CharacterBody2D *)x)
 
@@ -37,7 +41,7 @@
 #define COLLAYER_ENEMIES (1 << 1)
 #define COLLAYER_PLAYER_PROJECTILE (1 << 2)
 
-#define NODE_NM_POLYGON "polygon"
+#define NODE_NM_POLYGON "Polygon2D"
 
 using namespace godot;
 
@@ -350,7 +354,8 @@ void GameNode::_physics_process(double dt) {
                     case ENTITY_ENEMY: {
                         pos = (Vector2){0.0f, 0.0f};
 
-                        node->root = createSquareBody(pos, COLOR_RED);
+                        Ref<PackedScene> scene = ResourceLoader::get_singleton()->load("res://scenes/entities/chars/enemy.tscn");
+                        node->root             = NODE2D(scene->instantiate());
                         BODY2D(node->root)->set_collision_layer(COLLAYER_ENEMIES);
                         BODY2D(node->root)->set_collision_mask(COLLAYER_PLAYER);
 
@@ -361,7 +366,8 @@ void GameNode::_physics_process(double dt) {
                     case ENTITY_PLAYER: {
                         pos = (Vector2){0.0f, 0.0f};
 
-                        node->root = createSquareBody(pos, COLOR_GREEN);
+                        Ref<PackedScene> scene = ResourceLoader::get_singleton()->load("res://scenes/entities/chars/player.tscn");
+                        node->root             = NODE2D(scene->instantiate());
                         BODY2D(node->root)->set_collision_layer(COLLAYER_PLAYER);
                         BODY2D(node->root)->set_collision_mask(COLLAYER_ENEMIES);
 
